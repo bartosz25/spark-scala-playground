@@ -62,7 +62,8 @@ project/target
 *.class
 *.log
 
-
+spark-warehouse/
+work/
 
 # End of https://www.gitignore.io/api/sbt,scala,intellij
 
