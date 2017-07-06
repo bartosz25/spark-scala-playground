@@ -9,18 +9,18 @@ object InMemoryDatabase {
 
   val DbName = "testdb"
   val DbDriver = "org.h2.Driver"
-  val DbConnection = "jdbc:h2:~/" + DbName
+  val DbConnection = "jdbc:h2:~/" + DbName+";TRACE_LEVEL_FILE=3"
   val DbUser = "root"
   val DbPassword = ""
 
   lazy val connection = {
     Class.forName(DbDriver)
     val dbConnection = DriverManager.getConnection(DbConnection, DbUser, DbPassword)
+    dbConnection.setAutoCommit(false)
     dbConnection
   }
 
   def createTable(query: String): InMemoryDatabase.type= {
-    connection.setAutoCommit(false)
     val createPreparedStatement = connection.prepareStatement(query)
     createPreparedStatement.executeUpdate()
     createPreparedStatement.close()
@@ -34,10 +34,11 @@ object InMemoryDatabase {
 
   def populateTable[T <: DataOperation](populateQuery: String, dataToInsert: Seq[T]) = {
     for (data <- dataToInsert) {
-      val preparedStatement = connection.prepareCall(populateQuery)
+      val preparedStatement = connection.prepareStatement(populateQuery)
       data.populatePreparedStatement(preparedStatement)
-      preparedStatement.executeUpdate()
+      preparedStatement.execute()
       preparedStatement.close()
     }
+    connection.commit()
   }
 }
