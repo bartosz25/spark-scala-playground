@@ -15,6 +15,6 @@ libraryDependencies += "org.apache.spark" % "spark-network-common_2.11" % "2.1.0
 libraryDependencies += "org.apache.spark" % "spark-yarn_2.11" % "2.1.0"
 // https://mvnrepository.com/artifact/com.h2database/h2
 libraryDependencies += "com.h2database" % "h2" % "1.4.195"
-
+libraryDependencies += "mysql" % "mysql-connector-java" % "6.0.6"
 
 

@@ -29,7 +29,7 @@ object InMemoryDatabase {
   }
 
   def cleanDatabase() {
-    DeleteDbFiles.execute("~", DbName, true)
+    DeleteDbFiles.execute("~", DbName, false)
   }
 
   def populateTable[T <: DataOperation](populateQuery: String, dataToInsert: Seq[T]) = {
