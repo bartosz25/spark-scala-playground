@@ -23,7 +23,7 @@ class StatisticsTest extends FlatSpec with Matchers with BeforeAndAfterAll {
   "statistics" should "remain unchanged for simple filter operation" in {
     val pairIdShops = shops.filter(shops("id")%2 === 0)
 
-    val queryExecution = pairIdShops.queryExecution.toStringWithStats
+    val queryExecution = pairIdShops.queryExecution.stringWithStats
 
     // Expected statistics:
     // == Optimized Logical Plan ==
@@ -32,14 +32,14 @@ class StatisticsTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     // +- LocalRelation [_1#2, _2#3], Statistics(sizeInBytes=120.0 B, hints=none)
     // As told in the post, the size doesn't change because the projection remains the same
     queryExecution should include("Statistics(sizeInBytes=120.0 B, hints=none)")
-    val queryExecutionWithoutFilter = shops.queryExecution.toStringWithStats
+    val queryExecutionWithoutFilter = shops.queryExecution.stringWithStats
     queryExecutionWithoutFilter should include("Statistics(sizeInBytes=120.0 B, hints=none)")
   }
 
   "statistics" should "change after joining 2 datasets" in {
     val shopsWithRevenues = shops.join(revenues)
 
-    val queryExecution = shopsWithRevenues.queryExecution.toStringWithStats
+    val queryExecution = shopsWithRevenues.queryExecution.stringWithStats
 
     // Expected plan is:
     // Join Inner, Statistics(sizeInBytes=4.7 KB, hints=none)
@@ -53,7 +53,7 @@ class StatisticsTest extends FlatSpec with Matchers with BeforeAndAfterAll {
   "statistics for limit" should "decrease" in {
     val limitedShops = shops.limit(2)
 
-    val queryExecution = limitedShops.queryExecution.toStringWithStats
+    val queryExecution = limitedShops.queryExecution.stringWithStats
 
     // Expected plan is:
     // == Optimized Logical Plan ==
@@ -70,7 +70,7 @@ class StatisticsTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     ).toDF("id", "Name")
     val allShops = shops.union(newShops)
 
-    val queryExecution = allShops.queryExecution.toStringWithStats
+    val queryExecution = allShops.queryExecution.stringWithStats
 
     // Expected plan is:
     // == Optimized Logical Plan ==

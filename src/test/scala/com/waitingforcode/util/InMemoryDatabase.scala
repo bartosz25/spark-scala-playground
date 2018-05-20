@@ -1,7 +1,7 @@
 package com.waitingforcode.util
 
 import org.h2.tools.DeleteDbFiles
-import java.sql.DriverManager
+import java.sql.{DriverManager, ResultSet, Statement}
 
 import com.waitingforcode.util.sql.data.DataOperation
 
@@ -40,5 +40,15 @@ object InMemoryDatabase {
       preparedStatement.close()
     }
     connection.commit()
+  }
+
+  def getRows[T](query: String, mappingFunction: ResultSet => T): Seq[T] = {
+    val statement: Statement = connection.createStatement()
+    val resultSet: ResultSet = statement.executeQuery(query)
+    val results = new scala.collection.mutable.ListBuffer[T]()
+    while (resultSet.next()) {
+      results.append(mappingFunction(resultSet))
+    }
+    results
   }
 }
