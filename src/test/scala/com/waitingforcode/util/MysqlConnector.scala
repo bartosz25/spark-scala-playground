@@ -1,6 +1,6 @@
 package com.waitingforcode.util
 
-import java.sql.DriverManager
+import java.sql.{DriverManager, ResultSet, Statement}
 
 import com.waitingforcode.util.sql.data.DataOperation
 
@@ -11,6 +11,13 @@ class MysqlConnector(url: String, user: String, password: String) {
     val dbConnection = DriverManager.getConnection(url, user, password)
     dbConnection.setAutoCommit(false)
     dbConnection
+  }
+
+  def executedSideEffectQuery(query: String): Unit = {
+    val statement = connection.prepareStatement(query)
+    statement.execute()
+    statement.close()
+    connection.commit()
   }
 
   def cleanTable(tableName: String): Unit = {
@@ -30,4 +37,15 @@ class MysqlConnector(url: String, user: String, password: String) {
     connection.commit()
   }
 
+  def getRows[T](query: String, mappingFunction: ResultSet => T): Seq[T] = {
+    val statement: Statement = connection.createStatement()
+    val resultSet: ResultSet = statement.executeQuery(query)
+    val results = new scala.collection.mutable.ListBuffer[T]()
+    while (resultSet.next()) {
+      results.append(mappingFunction(resultSet))
+    }
+    results
+  }
+
+  def close() = connection.close()
 }

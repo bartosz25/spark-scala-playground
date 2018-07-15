@@ -42,6 +42,7 @@ object InMemoryDatabase {
     connection.commit()
   }
 
+  // TODO : same as in InMemory - use common function
   def getRows[T](query: String, mappingFunction: ResultSet => T): Seq[T] = {
     val statement: Statement = connection.createStatement()
     val resultSet: ResultSet = statement.executeQuery(query)
