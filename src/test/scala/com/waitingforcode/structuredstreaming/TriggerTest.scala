@@ -138,14 +138,15 @@ class TriggerTest extends FlatSpec with Matchers {
 
     query.awaitTermination(30000)
 
-    val processingTimes = Seq[Long]()
+    val processingTimes = new mutable.ListBuffer[Long]()
     for (index <- 0 until Container.processingTimes.size - 1) {
       val currentTimestamp = Container.processingTimes(index)
       val nextTimestamp = Instant.ofEpochMilli(Container.processingTimes(index+1))
 
       val processingTimeDiffInSec = nextTimestamp.minusMillis(currentTimestamp).getEpochSecond
-      processingTimes :+ processingTimeDiffInSec
+      processingTimes.append(processingTimeDiffInSec)
     }
+    processingTimes should not be empty
     // Even though the trigger was defined to 1 second, we can see that the data processing is not launched
     // when there is no new data to process. So logically we should't find any difference
     // of 1 second between trigger subsequent executions for data processing
@@ -154,5 +155,5 @@ class TriggerTest extends FlatSpec with Matchers {
 }
 
 object Container {
-  var processingTimes = new ListBuffer[Long]()
+  val processingTimes = new ListBuffer[Long]()
 }
