@@ -1,19 +1,19 @@
-package com.waitingforcode.sql
+package com.waitingforcode.sql.nested
 
 import java.io.File
 
 import org.apache.commons.io.FileUtils
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
-import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FlatSpec, Matchers}
 
-class NestedDataUnpredictableTest extends FlatSpec with Matchers with BeforeAndAfter {
+class NestedDataUnpredictableTest extends FlatSpec with Matchers with BeforeAndAfter with BeforeAndAfterAll {
 
-  val sparkSession: SparkSession = SparkSession.builder()
+  private val sparkSession: SparkSession = SparkSession.builder()
     .appName("Spark SQL unstructured nested data test").master("local[*]").getOrCreate()
   import sparkSession.implicits._
 
-  after {
+  override def afterAll() {
     sparkSession.stop()
   }
 
