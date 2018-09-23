@@ -1,6 +1,5 @@
 package com.waitingforcode.structuredstreaming.join
 
-import com.waitingforcode.structuredstreaming.{JoinedEvent, MainEvent}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.execution.streaming.MemoryStream
 import org.apache.spark.sql.functions._

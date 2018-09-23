@@ -2,7 +2,6 @@ package com.waitingforcode.structuredstreaming.join
 
 import java.sql.Timestamp
 
-import com.waitingforcode.structuredstreaming.{Events, JoinedEvent, MainEvent}
 import org.apache.spark.sql.execution.streaming.MemoryStream
 import org.apache.spark.sql.streaming.StreamingQuery
 import org.joda.time.{DateTimeZone, LocalDateTime}

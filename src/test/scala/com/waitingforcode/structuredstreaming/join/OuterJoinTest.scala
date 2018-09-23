@@ -2,7 +2,6 @@ package com.waitingforcode.structuredstreaming.join
 
 import java.sql.Timestamp
 
-import com.waitingforcode.structuredstreaming.{JoinedEvent, MainEvent}
 import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.execution.streaming.MemoryStream
 import org.apache.spark.sql.functions.{expr, current_timestamp}

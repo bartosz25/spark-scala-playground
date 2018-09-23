@@ -3,7 +3,6 @@ package com.waitingforcode.structuredstreaming.join
 import java.sql.Timestamp
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.waitingforcode.structuredstreaming.{Events, JoinedEvent, MainEvent}
 import org.apache.spark.sql.execution.streaming.MemoryStream
 import org.apache.spark.sql.streaming.StreamingQuery
 import org.apache.spark.sql.{ForeachWriter, Row}
@@ -58,4 +57,15 @@ class OneKeyDataSender(query: StreamingQuery, mainEventsStream: MemoryStream[Mai
     }
   })
 
+}
+
+case class MainEvent(mainKey: String, mainEventTime: Long, mainEventTimeWatermark: Timestamp) {
+}
+
+case class JoinedEvent(joinedKey: String, joinedEventTime: Long, joinedEventTimeWatermark: Timestamp)
+
+object Events {
+  def joined(key: String, eventTime: Long = System.currentTimeMillis()): JoinedEvent = {
+    JoinedEvent(key, eventTime, new Timestamp(eventTime))
+  }
 }
