@@ -1,5 +1,7 @@
 package com.waitingforcode.serialization
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import org.apache.spark.{SparkConf, SparkContext, SparkException}
 import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 
@@ -34,7 +36,9 @@ class LazyLoadingTest extends FlatSpec with Matchers with BeforeAndAfter {
     val numbersAccumulator = sparkContext.collectionAccumulator[Int]("iterated numbers accumulator")
     // This version is a variation of the previous test because it
     // sends given object only once and thanks to that we can, for example,
-    // keep the connection open
+    // keep the connection open for all tasks executed on given executor.
+    // The connector keeps its connection "open" because it initialized lazily and since it's created from a broadcast variable,
+    // it's guaranteed that only once such instance exists in the executor. 
     val connectorBroadcast = sparkContext.broadcast(NotSerializableLazyConnector())
     sparkContext.parallelize(0 to 1)
       .foreachPartition(numbers => {
@@ -43,8 +47,24 @@ class LazyLoadingTest extends FlatSpec with Matchers with BeforeAndAfter {
           numbersAccumulator.add(number)
         })
       })
+    sparkContext.parallelize(4 to 5)
+      .foreachPartition(numbers => {
+        numbers.foreach(number => {
+          connectorBroadcast.value.push(number)
+          numbersAccumulator.add(number)
+        })
+      })
+    sparkContext.parallelize(7 to 8)
+      .foreachPartition(numbers => {
+        numbers.foreach(number => {
+          connectorBroadcast.value.push(number)
+          numbersAccumulator.add(number)
+        })
+      })
 
-    numbersAccumulator.value should contain allOf(0, 1)
+    numbersAccumulator.value should contain allOf(0, 1, 4, 5, 7, 8)
+    NotSerializableLazyConnector.InitializationCount.get() shouldEqual 1
+    NotSerializableLazyConnector.InitializationCount.set(0)
   }
 
   "eagerly loaded not serializable object" should "make processing fail" in {
@@ -96,7 +116,10 @@ class NotSerializableSender {
 }
 
 object NotSerializableLazyConnector {
+  val InitializationCount = new AtomicInteger(0)
+
   def apply(): NotSerializableLazyConnector = {
+    InitializationCount.incrementAndGet()
     new NotSerializableLazyConnector(() => new NotSerializableSender())
   }
 }
