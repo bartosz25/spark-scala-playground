@@ -1,0 +1,1 @@
+The code used to generate the files used in the tests is located in /resources/memory_impact directory.
