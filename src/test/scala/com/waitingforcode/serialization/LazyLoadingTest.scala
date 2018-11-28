@@ -7,11 +7,12 @@ import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 
 class LazyLoadingTest extends FlatSpec with Matchers with BeforeAndAfter {
 
-  val conf = new SparkConf().setAppName("Spark lazy loading singleton test").setMaster("local")
+  val conf = new SparkConf().setAppName("Spark lazy loading singleton test").setMaster("local[2]")
   var sparkContext:SparkContext = null
 
   before {
     sparkContext = SparkContext.getOrCreate(conf)
+    NotSerializableLazyConnector.InitializationCount.set(0)
   }
 
   after {
@@ -38,7 +39,7 @@ class LazyLoadingTest extends FlatSpec with Matchers with BeforeAndAfter {
     // sends given object only once and thanks to that we can, for example,
     // keep the connection open for all tasks executed on given executor.
     // The connector keeps its connection "open" because it initialized lazily and since it's created from a broadcast variable,
-    // it's guaranteed that only once such instance exists in the executor. 
+    // it's guaranteed that only once such instance exists in the executor.
     val connectorBroadcast = sparkContext.broadcast(NotSerializableLazyConnector())
     sparkContext.parallelize(0 to 1)
       .foreachPartition(numbers => {
@@ -105,6 +106,7 @@ class NotSerializableLazyConnector(creator: () => NotSerializableSender) extends
   lazy val sender = creator()
 
   def push(value: Int) = {
+    println(s"push ${value}")
     sender.push(value)
   }
 }

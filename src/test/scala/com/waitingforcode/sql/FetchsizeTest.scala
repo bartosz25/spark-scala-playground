@@ -4,10 +4,10 @@ import java.sql.PreparedStatement
 import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
 
-import com.waitingforcode.util.{InMemoryDatabase, MysqlConnector}
+import com.waitingforcode.util.MysqlConnector
 import com.waitingforcode.util.javaassist.{MethodInvocationCounter, MethodInvocationDecorator}
 import com.waitingforcode.util.sql.data.DataOperation
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Row, SparkSession}
 import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 
 import scala.collection.mutable
@@ -80,7 +80,7 @@ class FetchsizeTest extends FlatSpec with Matchers with BeforeAndAfter {
       .options(getOptionsMap(10))
       .load()
 
-    jdbcDataFrame.foreachPartition(rows => {
+    jdbcDataFrame.foreachPartition((rows: Iterator[Row]) => {
       while (rows.hasNext && rows.next.getAs[Int]("id") < 20) {
         // Do nothing, only to show the case
       }

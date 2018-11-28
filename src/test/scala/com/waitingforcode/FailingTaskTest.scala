@@ -1,6 +1,6 @@
 package com.waitingforcode
 
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.{SparkConf, SparkContext, SparkException}
 import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 
 class FailingTaskTest extends FlatSpec with Matchers with BeforeAndAfter {
@@ -22,12 +22,14 @@ class FailingTaskTest extends FlatSpec with Matchers with BeforeAndAfter {
     val data = 1 to 500
     val inputRdd = sparkContext.parallelize(data, 3)
 
-    inputRdd.map(number => {
-      if (number == 250) {
-        throw new RuntimeException("This exception is thrown to simulate task failures and lead to job failure")
-      }
-      s"Number#${number}"
-    }).count()
+    intercept[SparkException] {
+      inputRdd.map(number => {
+        if (number == 250) {
+          throw new RuntimeException("This exception is thrown to simulate task failures and lead to job failure")
+        }
+        s"Number#${number}"
+      }).count()
+    }
   }
 
 }

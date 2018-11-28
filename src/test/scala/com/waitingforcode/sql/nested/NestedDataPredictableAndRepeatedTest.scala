@@ -13,10 +13,6 @@ class NestedDataPredictableAndRepeatedTest extends FlatSpec with Matchers with B
     .appName("Spark SQL nested repeated data test").master("local[*]").getOrCreate()
   import sparkSession.implicits._
 
-  override def afterAll() {
-    sparkSession.stop()
-  }
-
   private val RepeatedNestedFile = "/tmp/spark/repeated_nested.json"
 
   before {

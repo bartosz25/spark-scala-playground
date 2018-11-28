@@ -13,10 +13,6 @@ class NestedDataUnpredictableTest extends FlatSpec with Matchers with BeforeAndA
     .appName("Spark SQL unstructured nested data test").master("local[*]").getOrCreate()
   import sparkSession.implicits._
 
-  override def afterAll() {
-    sparkSession.stop()
-  }
-
   private val OneLevelFile = "/tmp/spark/1_level_unpredictable.json"
 
   before {

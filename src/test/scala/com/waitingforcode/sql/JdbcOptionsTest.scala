@@ -13,6 +13,11 @@ import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FlatSpec, Matchers}
 
 class JdbcOptionsTest extends FlatSpec with Matchers with BeforeAndAfter with BeforeAndAfterAll {
 
+  private val ExecuteBatchMethodName = "executeBatch"
+  override def beforeAll() {
+    MethodInvocationDecorator.decorateClass("com.mysql.cj.jdbc.StatementImpl", "executeBatch").toClass
+  }
+
   private val Connection = "jdbc:mysql://127.0.0.1:3306/spark_jdbc_options_test?serverTimezone=UTC"
   private val DbUser = "root"
   private val DbPassword = "root"
@@ -33,7 +38,6 @@ class JdbcOptionsTest extends FlatSpec with Matchers with BeforeAndAfter with Be
     MysqlConnector.close()
   }
 
-  private val ExecuteBatchMethodName = "executeBatch"
   before {
     MethodInvocationCounter.methodInvocations.remove(ExecuteBatchMethodName)
   }
@@ -73,7 +77,9 @@ class JdbcOptionsTest extends FlatSpec with Matchers with BeforeAndAfter with Be
     val rows = MysqlConnector2.getRows(s"SELECT * FROM ${TransactionIsolationNoneTable}", (resultSet) => {
       (resultSet.getInt("id"), resultSet.getString("login"))
     })
-    rows should have size 4
+    MysqlConnector2.close()
+    // Depending on the concurrency, sometimes the table may return 6 users - hence assert only on the first 4 that
+    // are returned the most of the time
     rows should contain allOf((1, "User#1"), (2, "User#2"), (3, "User#3"), (4, "User#4"))
   }
 
@@ -162,7 +168,6 @@ class JdbcOptionsTest extends FlatSpec with Matchers with BeforeAndAfter with Be
       // We test batchsize so having 1 partition is more than useful
       .repartition(1)
 
-    MethodInvocationDecorator.decorateClass("com.mysql.cj.jdbc.StatementImpl", "executeBatch").toClass
     users.write
       .option("batchsize", 3)
       .mode(SaveMode.Overwrite)

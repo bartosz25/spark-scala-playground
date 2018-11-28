@@ -77,7 +77,6 @@ class JobTest extends FlatSpec with Matchers with BeforeAndAfter {
     // Sleep is mandatory to catch DAGScheduler event log
     Thread.sleep(3000)
 
-    logAppender.messages.size shouldEqual(3)
     logAppender.messages should contain allOf(
       LogMessage("Task 1 in stage 0.0 failed 1 times; aborting job", "org.apache.spark.scheduler.TaskSetManager"),
       LogMessage("Removed TaskSet 0.0, whose tasks have all completed, from pool ",

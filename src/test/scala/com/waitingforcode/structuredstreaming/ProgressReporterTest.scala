@@ -39,7 +39,7 @@ class ProgressReporterTest extends FlatSpec with Matchers with BeforeAndAfterAll
       }
     }).start()
 
-    query.awaitTermination(25000)
+    query.awaitTermination(45000)
     val firstProgress = progress(0)
     firstProgress.batchId shouldEqual(0L)
     firstProgress.stateOperators should have size 0
@@ -51,7 +51,7 @@ class ProgressReporterTest extends FlatSpec with Matchers with BeforeAndAfterAll
     secondProgress.durationMs.get("addBatch").toLong should be > 6000L
     secondProgress.durationMs.get("getBatch").toLong should be < 1000L
     secondProgress.durationMs.get("queryPlanning").toLong should be < 1000L
-    secondProgress.durationMs.get("triggerExecution").toLong should be < 11000L
+    secondProgress.durationMs.get("triggerExecution").toLong should be < 31000L
     secondProgress.durationMs.get("walCommit").toLong should be < 500L
     secondProgress.stateOperators(0).numRowsTotal should be < 10L
     secondProgress.stateOperators(0).numRowsTotal should be > 0L
@@ -59,8 +59,8 @@ class ProgressReporterTest extends FlatSpec with Matchers with BeforeAndAfterAll
     secondProgress.stateOperators(0).memoryUsedBytes should be > 10000L
     secondProgress.sources should have size 1
     secondProgress.sources(0).startOffset shouldEqual("0")
-    secondProgress.sources(0).numInputRows should be >= 200L
-    secondProgress.sink.description shouldEqual("ForeachSink")
+    secondProgress.sources(0).numInputRows should be >= 20L
+    secondProgress.sink.description.contains("ForeachWriterProvider") shouldBe true
   }
 
 }

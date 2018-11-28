@@ -16,6 +16,7 @@ class AutomaticSchemaDetectionTest extends FlatSpec with Matchers with BeforeAnd
   val structuredParquetFile = new File("./structured_data.parquet")
 
   before {
+    InMemoryDatabase.cleanDatabase()
     sparkSession = SparkSession.builder()
       .appName("Spark SQL automatic schema resolution test").master("local[1]").getOrCreate()
     // Structured data
@@ -46,9 +47,8 @@ class AutomaticSchemaDetectionTest extends FlatSpec with Matchers with BeforeAnd
   after {
     FileUtils.forceDelete(structuredFile)
     FileUtils.forceDelete(semiStructuredFile)
-    structuredParquetFile.delete()
+    FileUtils.forceDelete(structuredParquetFile)
     sparkSession.stop()
-    InMemoryDatabase.cleanDatabase()
   }
 
   "structured data" should "have its schema resolved automatically" in {
@@ -70,8 +70,7 @@ class AutomaticSchemaDetectionTest extends FlatSpec with Matchers with BeforeAnd
 
   "structured data from in-memory database" should "have the schema resolved automatically" in {
     InMemoryDatabase
-      .createTable("CREATE TABLE city(name varchar(30) primary key, country varchar(50))")
-
+      .createTable("CREATE TABLE city(name varchar(30) NOT NULL, country varchar(50))")
     val structuredDbData = sparkSession.read.format("jdbc")
       .option("url", InMemoryDatabase.DbConnection)
       .option("driver", InMemoryDatabase.DbDriver)
@@ -83,6 +82,8 @@ class AutomaticSchemaDetectionTest extends FlatSpec with Matchers with BeforeAnd
     val resolvedSchema = structuredDbData.schema
     val schemaFields = resolvedSchema.fields
 
+    // TODO : here the nameField is set to nullable
+    println(schemaFields.mkString("\n"))
     val nameField = schemaFields.filter(field => field.name == "NAME")(0)
     nameField.dataType shouldBe(DataTypes.StringType)
     nameField.nullable shouldBe false

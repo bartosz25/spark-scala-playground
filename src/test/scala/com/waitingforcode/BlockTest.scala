@@ -49,7 +49,7 @@ class BlockTest extends FlatSpec with Matchers with BeforeAndAfter {
     // when the ShuffleBlockFetcherIterator iterates among all blocks to fetch and
     // resolves which ones are stored locally and which ones remotely.
     // The 2nd log is printed when fetchnig of shuffle remote blocks begins.
-    logMessages should contain ("Getting 5 non-empty blocks out of 5 blocks")
+    logMessages should contain ("Getting 5 non-empty blocks including 5 local blocks and 0 remote blocks")
     logMessages.find(log => log.startsWith("Started 0 remote fetches")) should not be empty;
   }
 

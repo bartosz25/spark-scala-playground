@@ -94,7 +94,7 @@ class SamplePartitioner extends Partitioner{
 
   override def getPartition(key: Any): Int = {
     key match {
-      case Int => partitionIntKey(key.asInstanceOf[Int])
+      case nr: Int => partitionIntKey(nr)
       case _ => throw new IllegalArgumentException(s"Unsupported key ${key}")
     }
   }

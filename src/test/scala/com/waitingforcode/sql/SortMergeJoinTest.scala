@@ -14,10 +14,6 @@ class SortMergeJoinTest extends FlatSpec with BeforeAndAfter with Matchers {
     .config("spark.sql.defaultSizeInBytes", "100000")
     .getOrCreate()
 
-  after {
-    sparkSession.stop()
-  }
-
   "sort-merge join" should "be used when neither broadcast nor hash join are possible" in {
     import sparkSession.implicits._
 

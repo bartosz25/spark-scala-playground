@@ -1,13 +1,13 @@
 package com.waitingforcode.sql
 
+import java.math.BigDecimal
 import java.sql.PreparedStatement
 import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
-import java.math.BigDecimal
 
 import com.waitingforcode.util.InMemoryDatabase
 import com.waitingforcode.util.sql.data.DataOperation
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Row, SparkSession}
 import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 
 import scala.collection.mutable
@@ -56,7 +56,7 @@ class PartitioningTest extends FlatSpec with BeforeAndAfter with Matchers {
       .load()
 
     jdbcDF.select("shop_id")
-      .foreachPartition(partitionRows => {
+      .foreachPartition((partitionRows: Iterator[Row]) => {
         val shops = partitionRows.map(row => row.getAs[Int]("shop_id")).toSet
         DataPerPartitionHolder.PartitionsEqualToShopIds.append(shops)
       })
@@ -88,7 +88,7 @@ class PartitioningTest extends FlatSpec with BeforeAndAfter with Matchers {
       .load()
 
     jdbcDF.select("shop_id")
-      .foreachPartition(partitionRows => {
+      .foreachPartition((partitionRows: Iterator[Row]) => {
         val shops = partitionRows.map(row => row.getAs[Int]("shop_id")).toSet
         DataPerPartitionHolder.DataPerPartitionReducedPartitionsNumber.append(shops)
       })
@@ -117,7 +117,7 @@ class PartitioningTest extends FlatSpec with BeforeAndAfter with Matchers {
       .load()
 
     jdbcDF.select("shop_id")
-      .foreachPartition(partitionRows => {
+      .foreachPartition((partitionRows: Iterator[Row]) => {
         val shops = partitionRows.map(row => row.getAs[Int]("shop_id")).toSet
         DataPerPartitionHolder.DataPerPartitionStridesComputationExample.append(shops)
       })
@@ -151,11 +151,11 @@ class PartitioningTest extends FlatSpec with BeforeAndAfter with Matchers {
       .options(getOptionsMap(numberOfPartitions, lowerBound, upperBound))
       .load()
 
-    jdbcDF.select("shop_id")
-      .foreachPartition(partitionRows => {
-        val shops = partitionRows.map(row => row.getAs[Int]("shop_id")).toSet
-        DataPerPartitionHolder.DataPerPartitionEmptyPartitions.append(shops)
-      })
+
+    jdbcDF.select("shop_id").foreachPartition((partitionRows: Iterator[Row]) => {
+      val shops = partitionRows.map(row => row.getAs[Int]("shop_id")).toSet
+      DataPerPartitionHolder.DataPerPartitionEmptyPartitions.append(shops)
+    })
 
     DataPerPartitionHolder.DataPerPartitionEmptyPartitions.size shouldEqual(5)
     DataPerPartitionHolder.DataPerPartitionEmptyPartitions(0) should contain allOf(0, 1, 2, 3)
@@ -176,7 +176,7 @@ class PartitioningTest extends FlatSpec with BeforeAndAfter with Matchers {
       .load()
 
     jdbcDF.select("amount")
-      .foreachPartition(partitionRows => {
+      .foreachPartition((partitionRows: Iterator[Row]) => {
         val shops = partitionRows.map(row => row.getAs[BigDecimal]("amount")).toSet
         DataPerPartitionHolder.DataPerPartitionDecimalColumn.append(shops)
         println(s">>> ${shops.mkString(",")}")

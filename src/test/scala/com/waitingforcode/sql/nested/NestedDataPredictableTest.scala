@@ -12,10 +12,6 @@ class NestedDataPredictableTest extends FlatSpec with Matchers with BeforeAndAft
     .appName("Spark SQL nested data test").master("local[*]").getOrCreate()
   import sparkSession.implicits._
 
-  override def afterAll {
-    sparkSession.stop()
-  }
-
   private val OneLevelFile = "/tmp/spark/1_level.json"
   private val TwoLevelsFile = "/tmp/spark/2_levels.json"
 

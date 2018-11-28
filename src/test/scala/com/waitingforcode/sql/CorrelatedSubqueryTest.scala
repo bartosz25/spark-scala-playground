@@ -1,9 +1,9 @@
 package com.waitingforcode.sql
 
 import org.apache.spark.sql.SparkSession
-import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
-class CorrelatedSubqueryTest extends FlatSpec with BeforeAndAfter with Matchers {
+class CorrelatedSubqueryTest extends FlatSpec with BeforeAndAfterAll with Matchers {
 
   private val SparkLocalSession = SparkSession.builder().appName("Correlated subquery test")
     .master("local[*]")
@@ -22,10 +22,6 @@ class CorrelatedSubqueryTest extends FlatSpec with BeforeAndAfter with Matchers 
   ).toDF
   ArticlesDataFrame.createOrReplaceTempView("articles")
   CategoriesDataFrame.createOrReplaceTempView("categories")
-
-  after {
-    SparkLocalSession.stop()
-  }
 
   behavior of "correlated subquery"
 

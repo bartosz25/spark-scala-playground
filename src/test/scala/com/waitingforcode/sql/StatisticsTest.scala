@@ -27,9 +27,10 @@ class StatisticsTest extends FlatSpec with Matchers with BeforeAndAfterAll {
 
     // Expected statistics:
     // == Optimized Logical Plan ==
-    // Project [_1#2 AS id#5, _2#3 AS name#6], Statistics(sizeInBytes=120.0 B, hints=none)
-    // +- Filter ((_1#2 % 2) = 0), Statistics(sizeInBytes=120.0 B, hints=none)
-    // +- LocalRelation [_1#2, _2#3], Statistics(sizeInBytes=120.0 B, hints=none)
+    // LocalRelation [id#5, name#6], Statistics(sizeInBytes=64.0 B, hints=none)
+    //
+    // == Physical Plan ==
+    //   LocalTableScan [id#5, name#6]" did not include substring "Statistics(sizeInBytes=120.0 B, hints=none)"
     // As told in the post, the size doesn't change because the projection remains the same
     queryExecution should include("Statistics(sizeInBytes=120.0 B, hints=none)")
     val queryExecutionWithoutFilter = shops.queryExecution.stringWithStats
