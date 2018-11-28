@@ -14,6 +14,8 @@ package object memoryimpact {
 
   private val File1Gb = "generated_file_1_gb.txt"
 
+  private val File1Gb1Mb = "generated_file_1_gb_1mb.txt"
+
   private val File3Gb = "generated_file_3_gb.txt"
 
   private val testDirectory = "/tmp/spark-memory-impact"
@@ -21,6 +23,8 @@ package object memoryimpact {
   val Test500MbFile = s"${testDirectory}/${File500Mb}"
 
   val Test1GbFile = s"${testDirectory}/${File1Gb}"
+
+  val Test1Gb1MbFile = s"${testDirectory}/${File1Gb1Mb}"
 
   val Test3GbFile = s"${testDirectory}/${File3Gb}"
 
@@ -65,10 +69,15 @@ package object memoryimpact {
       Files.copy(getClass.getResourceAsStream(s"/memory_impact/${File1Gb}"),
         file1GbPath)
     }
-    val file2GbPath = new File(Test3GbFile).toPath
-    if (!Files.exists(file2GbPath)) {
+    val file3GbPath = new File(Test3GbFile).toPath
+    if (!Files.exists(file3GbPath)) {
       Files.copy(getClass.getResourceAsStream(s"/memory_impact/${File3Gb}"),
-        file2GbPath)
+        file3GbPath)
+    }
+    val file1Gb1MbPath = new File(Test1Gb1MbFile).toPath
+    if (!Files.exists(file1Gb1MbPath)) {
+      Files.copy(getClass.getResourceAsStream(s"/memory_impact/${File1Gb1Mb}"),
+        file1Gb1MbPath)
     }
   }
 
