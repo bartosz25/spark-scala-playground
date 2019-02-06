@@ -19,4 +19,5 @@ object InMemoryKeyedStore {
 
   def getValues(key: String): mutable.ListBuffer[String] = Data.getOrElse(key, ListBuffer.empty)
 
+  def allValues = Data
 }
