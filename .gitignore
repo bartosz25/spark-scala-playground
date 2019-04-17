@@ -64,6 +64,9 @@ project/target
 
 spark-warehouse/
 work/
+src/test/resources/generated_file_1_gb.txt
+src/test/resources/generated_file_500_mb.txt
+
 
 # End of https://www.gitignore.io/api/sbt,scala,intellij
 
