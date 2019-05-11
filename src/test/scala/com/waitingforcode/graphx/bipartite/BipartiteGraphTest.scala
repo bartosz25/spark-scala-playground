@@ -29,7 +29,7 @@ class BipartiteGraphTest extends FlatSpec with Matchers {
   )
   private val graph = Graph(vertices, edges)
 
-  it should "stop iteration after reaching the maximal number of iterations" in {
+  "collaborative filtering" should "generate product recommendations for users" in {
     val verticesWithDegree = graph.triplets.groupBy(triplet => triplet.srcId)
       .map {
         case (userVertexId, edges) => (userVertexId, edges.size)
@@ -65,7 +65,6 @@ class BipartiteGraphTest extends FlatSpec with Matchers {
         partitionData.foreach {
           case ((srcUser, dstUser), commonItemsWithUserDegrees) => {
             val neighborsWeight = RecommendationFunctions.computeNeighborsWeight(commonItemsWithUserDegrees)
-            // TODO: try to persist the degree of both users too and not pass it throughout the whole program
             UsersWeightsStore.addWeight(srcUser, dstUser, neighborsWeight)
           }
         }
