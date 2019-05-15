@@ -1,21 +1,9 @@
 package com.waitingforcode.sql
 
-import com.waitingforcode.util.InMemoryDatabase
 import org.apache.spark.sql.{SparkSession, functions}
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import org.scalatest.{FlatSpec, Matchers}
 
-class BroadcastHintTest extends FlatSpec with Matchers with BeforeAndAfterAll {
-
-  override def beforeAll(): Unit = {
-    InMemoryDatabase.cleanDatabase()
-    JoinHelper.createTables()
-    val customerIds = JoinHelper.insertCustomers(1)
-    JoinHelper.insertOrders(customerIds, 4)
-  }
-
-  override def afterAll() {
-    InMemoryDatabase.cleanDatabase()
-  }
+class BroadcastHintTest extends FlatSpec with Matchers {
 
   private val testSession = SparkSession.builder()
     .appName("Spark broadcast hint").master("local[*]")
