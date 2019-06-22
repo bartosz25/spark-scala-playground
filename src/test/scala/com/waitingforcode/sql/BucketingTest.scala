@@ -1,6 +1,6 @@
 package com.waitingforcode.sql
 
-import org.apache.spark.sql.{SaveMode, SparkSession}
+import org.apache.spark.sql.{AnalysisException, SaveMode, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -20,6 +20,16 @@ class BucketingTest extends FlatSpec with Matchers {
     metadata.bucketSpec shouldBe defined
     metadata.bucketSpec.get.numBuckets shouldEqual 2
     metadata.bucketSpec.get.bucketColumnNames(0) shouldEqual "user_id"
+  }
+
+  "saving a bucket to JSON sink" should "fail" in {
+    val orders = Seq((1L, "user1"), (2L, "user2"), (3L, "user3"), (4L, "user1")).toDF("order_id", "user_id")
+
+    val exception = intercept[AnalysisException] {
+      orders.write.mode(SaveMode.Overwrite).bucketBy(2, "user_id").json("/tmp/test_json_bucket/")
+    }
+
+    exception.getMessage shouldEqual "'save' does not support bucketBy right now;"
   }
 
   "Spark 2.4.0" should "not read buckets filtered out" in {
