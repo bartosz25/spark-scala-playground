@@ -6,6 +6,8 @@ scalaVersion := "2.11.12"
 
 val sparkVersion = "2.4.0"
 
+
+
 libraryDependencies += "org.apache.spark" %% "spark-core" % s"${sparkVersion}"
 libraryDependencies += "org.apache.spark" %% "spark-streaming" % s"${sparkVersion}"
 libraryDependencies += "org.apache.spark" %% "spark-sql" % s"${sparkVersion}"
@@ -27,5 +29,6 @@ libraryDependencies += "com.h2database" % "h2" % "1.4.195"
 libraryDependencies += "mysql" % "mysql-connector-java" % "6.0.6"
 libraryDependencies += "org.postgresql" % "postgresql" % "42.2.0"
 
-//resolvers += "bintray-spark-packages" at "https://dl.bintray.com/spark-packages/maven/"
-libraryDependencies += "graphframes" % "graphframes" % "0.6.0-spark2.3-s_2.11"
+resolvers += "bintray-spark-packages" at "https://dl.bintray.com/spark-packages/maven/"
+
+libraryDependencies += "graphframes" % "graphframes" % "0.7.0-spark2.3-s_2.11"
