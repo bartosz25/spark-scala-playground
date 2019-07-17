@@ -1,0 +1,28 @@
+{
+  "namespace": "com.waitingforcode.sql.avro",
+  "type": "record", "name": "Order",
+  "fields": [
+    {"name": "id", "type": "long"},
+    {"name": "creationDate", "type": {"type": "string", "logicalType": "timestamp-millis"}},
+    {"name": "promotionalCode", "type": ["null", "int"], "aliases" : ["promoCode"]},
+    {"name": "products", "type": {"type": "array", "items": {
+      "name": "Product", "type": "record", "fields": [
+        {"name": "id", "type": "long"},
+        {"name": "name", "type": "string"},
+        {"name": "unitaryPrice", "type": "double"},
+        {"name": "productsInBasket", "type": "int"}
+      ]
+    }}},
+    {"name": "extraInfo", "type": {"type": "map", "values": ["null", "string"]}},
+    {"name": "customer", "type": {
+      "type": "record", "name": "Customer", "fields": [
+        {"name": "customerType", "type": {"type": "enum", "name": "CustomerTypes", "symbols": ["BUSINESS", "PRIVATE"]}},
+        {"name": "address", "type": {
+          "name": "Address", "type": "record", "fields": [
+            {"name": "postalCode", "type": "int"}, {"name": "city", "type": "string"}
+          ]
+        }}
+      ]
+    }}
+  ]
+}
