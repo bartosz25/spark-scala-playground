@@ -76,11 +76,7 @@ object UnionAdvancedOptimizer extends Rule[LogicalPlan] {
       val join1 = Join(projection1, projection2, JoinType("fullouter"), Option(concatenatedExpressions))
       val projection = combineProjection(joinPairs, join1)
       projection
-    }
-  case other => {
-    println(s"Chck oth=${other}")
-    other
-  }
+    } 
   }
 
   private def combineProjection(joinAttributes: Seq[Seq[Attribute]], childPlan: Join): Project = {
