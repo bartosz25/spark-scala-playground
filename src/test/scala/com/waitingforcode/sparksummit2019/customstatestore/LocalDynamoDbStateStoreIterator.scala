@@ -6,7 +6,8 @@ import org.apache.spark.sql.types.StructType
 
 import scala.collection.mutable
 
-class LocalDynamoDbStateStoreIterator(statesWithVersion: mutable.Map[String, mutable.Buffer[Long]], keySchema: StructType, valueSchema: StructType,
+class LocalDynamoDbStateStoreIterator(statesWithVersion: mutable.Map[String, SnapshotGroupForKey],
+                                      keySchema: StructType, valueSchema: StructType,
                                       dynamoDbProxy: DynamoDbProxy) extends Iterator[UnsafeRowPair] {
   private val unsafeRowPair = new UnsafeRowPair()
   private val statesToReturn = new mutable.Queue[StateStoreChange]()
@@ -31,8 +32,7 @@ class LocalDynamoDbStateStoreIterator(statesWithVersion: mutable.Map[String, mut
 
   private def fetchStateFromDynamoDb(groupedKeys: Seq[String]): Seq[StateStoreChange] = {
     val partitionKeysToGet = groupedKeys.map(key => {
-      val lastVersion = statesWithVersion(key).last
-      MappingStateStore.generatePartitionKey(key, lastVersion)
+      MappingStateStore.generatePartitionKey(key, statesWithVersion(key).lastVersion)
     })
     val states = dynamoDbProxy.readItems(StateStoreTable, partitionKeysToGet, StateStoreChange.fromItem _,
       MappingStateStore.PartitionKey, Seq(MappingStateStore.PartitionKey, MappingStateStore.StateData))

@@ -28,15 +28,16 @@ object InMemoryDataTest {
     val query = mappedResult
       .groupByKey(row => row.getAs[Long]("id"))
       .mapGroupsWithState(GroupStateTimeout.ProcessingTimeTimeout())(Mapping.mapStreamingLogsToSessions(sessionTimeout))
+      .filter(state => state.isDefined)
       .writeStream
       .outputMode("update")
       .foreach(
-        new ForeachWriter[String] {
+        new ForeachWriter[Option[String]] {
           override def open(partitionId: Long, epochId: Long): Boolean = {
             true
           }
 
-          override def process(value: String): Unit = {
+          override def process(value: Option[String]): Unit = {
             println(s"processing ${value}")
           }
 
@@ -67,18 +68,18 @@ object InMemoryDataTest {
 object Mapping {
 
   def mapStreamingLogsToSessions(timeoutDurationMs: Long)(key: Long, logs: Iterator[Row],
-                                                          currentState: GroupState[String]): String = {
+                                                          currentState: GroupState[Seq[String]]): Option[String] = {
     if (currentState.hasTimedOut) {
       println(s"Expiring state for ${key}")
       val expiredState = currentState.get
       currentState.remove()
-      expiredState
+      Some(expiredState.mkString(", "))
     } else {
-      val newState = currentState.getOption.map(state => s"${state} + ${logs.mkString(", ")}")
-        .getOrElse("")
-      currentState.update(newState)
+      val newLogs = logs.map(log => log.getAs[String]("name"))
+      val oldLogs = currentState.getOption.getOrElse(Seq.empty)
+      currentState.update(oldLogs ++ newLogs)
       currentState.setTimeoutDuration(timeoutDurationMs)
-      currentState.get
+      None
     }
   }
 

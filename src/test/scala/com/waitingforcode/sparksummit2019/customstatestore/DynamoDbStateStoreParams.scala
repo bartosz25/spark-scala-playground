@@ -4,7 +4,6 @@ import com.amazonaws.services.dynamodbv2.document._
 import com.waitingforcode.sparksummit2019.customstatestore.DynamoDbStateStoreParams.MappingStateStore
 import org.apache.spark.sql.catalyst.expressions.UnsafeRow
 
-import scala.collection.mutable
 import scala.util.Random
 
 
@@ -61,6 +60,7 @@ object DynamoDbStateStoreParams {
     val PartitionKey = "SnapshotGroup_Partition"
     val StateKey = "StateKey"
     val DeltaVersions = "DeltaVersions"
+    val DeleteDeltaVersion = "DeleteDeltaVersion"
   }
   // Partition keys in snapshot groups table won't be correctly distributed. To improve
   // the distribution, thus the throughput, I will add a suffix computed from the sort key
@@ -74,8 +74,8 @@ object DynamoDbStateStoreParams {
   def snapshotPartitionKey(snapshotGroup: Long, partitionId: Int, suffix: Int): String = {
     s"${snapshotGroup}_${partitionId}#${suffix}"
   }
-  def deltaVersionsOutput(versions: mutable.Buffer[Long]): String = versions.mkString(",")
-  def deltaVersionFromString(deltaVersions: String) = deltaVersions.split(", ")
+  def deltaVersionsOutput(versions: Seq[Long]): String = versions.mkString(",")
+  def deltaVersionFromString(deltaVersions: String) = deltaVersions.split(",")
     .map(snapshotVersion => snapshotVersion.toLong)
   private def getSuffixFromSortKey(sortKey: String): Int = {
     val randomGenerator = new Random(sortKey.hashCode)

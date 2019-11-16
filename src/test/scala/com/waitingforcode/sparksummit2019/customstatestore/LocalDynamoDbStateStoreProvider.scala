@@ -7,6 +7,7 @@ import com.amazonaws.services.dynamodbv2.document._
 import com.amazonaws.services.dynamodbv2.local.embedded.DynamoDBEmbedded
 import com.waitingforcode.sparksummit2019.customstatestore.DynamoDbStateStoreParams._
 import org.apache.hadoop.conf.Configuration
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.UnsafeRow
 import org.apache.spark.sql.execution.streaming.state.{StateStore, StateStoreConf, StateStoreCustomMetric, StateStoreCustomSumMetric, StateStoreId, StateStoreMetrics, StateStoreProvider, UnsafeRowPair}
 import org.apache.spark.sql.types.StructType
@@ -25,7 +26,8 @@ import scala.collection.mutable
   * - try a less memory-intensive approach where not all the state is stored on the main memory
   *
   */
-class LocalDynamoDbStateStoreProvider extends StateStoreProvider {
+
+class LocalDynamoDbStateStoreProvider extends StateStoreProvider with Logging {
 
   // I use the same values as in HDFSBackedStateStoreProvider
   // Except for: hadoopConf and numberOfVersionsToRetainInMemory because the internal logic won't use them
@@ -38,7 +40,7 @@ class LocalDynamoDbStateStoreProvider extends StateStoreProvider {
   // and the object is located on a single JVM, so it'll be shared across partitions.
   private lazy val UpdatesList = new ConcurrentLinkedQueue[StateStoreChange]()
 
-  private lazy val StatesWithVersions = new mutable.HashMap[String, mutable.Buffer[Long]]()
+  private lazy val StatesWithVersions = new mutable.HashMap[String, SnapshotGroupForKey]()
 
   // Why I'm declaring custom variables? Check the supportedMetrics method
   private lazy val customMetricFlushes = StateStoreCustomSumMetric("flushCalls",
@@ -64,23 +66,33 @@ class LocalDynamoDbStateStoreProvider extends StateStoreProvider {
   }
 
   override def getStore(version: Long): StateStore = {
-    if (version > 0) {
-      // TODO: it's probably called every time, even when the data is present in StateWithVersions
-      // TODO: confirm that and if it's the case, we can use that as the recovery proof :)
+    val snapshotGroupToRestore = getSnapshotGroup(version, storeConf.minDeltasForSnapshot)
+    val newVersion = version + 1
+    if (newVersion > 0 && StatesWithVersions.isEmpty) {
+      println(s"Got ${snapshotGroupToRestore} <<<<< ${version}")
 
-      // TODO: change to > 1
-      // TODO: see later how to fix the error of "The number of conditions on the keys is invalid"
-      // TODO: use https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Query.html for that
-      val restoredMap = LocalDynamoDbStateStoreRecovery.recoverState(version, stateStoreId_.partitionId,
-        DynamoDbStateStoreParams.SnapshotMaxSuffixes, new DynamoDbProxy(LocalDynamoDb.dynamoDbConnector))
+      // It will be called every time simply because I want the proof that restoring state
+      // will work.
+      logDebug(s"Restoring map for ${snapshotGroupToRestore}")
+      println(s"Restoring map for ${snapshotGroupToRestore}")
+      val restoredMap = LocalDynamoDbStateStoreRecovery.recoverState(
+        snapshotGroup = snapshotGroupToRestore,
+        partition = stateStoreId_.partitionId,
+        maxDeltaVersion = newVersion,
+        maxSuffixNumber = DynamoDbStateStoreParams.SnapshotMaxSuffixes,
+        dynamoDbProxy = new DynamoDbProxy(LocalDynamoDb.dynamoDbConnector))
       restoredMap.foreach(pair => StatesWithVersions.put(pair._1, pair._2))
+      logDebug(s"Got restoredMap=${restoredMap}")
+      println(s"Got restoredMap=${restoredMap}")
     }
-
 
     new LocalDynamoDbStateStore(id = stateStoreId_,
       keySchema = keySchema, valueSchema = valueSchema,
-      version = version, dynamoDb = LocalDynamoDb.dynamoDbConnector)
+      version = newVersion, dynamoDb = LocalDynamoDb.dynamoDbConnector)
   }
+
+  // Dividend and divisor are both integers, so the result will be also an integer (no need for rounding)
+  private def getSnapshotGroup(stateStoreVersion: Long, minDeltasForSnapshot: Int) = stateStoreVersion / minDeltasForSnapshot
 
   class LocalDynamoDbStateStore(override val id: StateStoreId,
                                 keySchema: StructType,
@@ -93,15 +105,13 @@ class LocalDynamoDbStateStoreProvider extends StateStoreProvider {
     private var isCommitted = false
     private val deletedStates = new mutable.ListBuffer[String]()
 
-    private val newVersion = version + 1
-
-    // Dividend and divisor are both integers, so the result will be also an integer (no need for rounding)
-    private lazy val snapshotGroup = newVersion / storeConf.minDeltasForSnapshot
+    private lazy val snapshotGroup = getSnapshotGroup(version, storeConf.minDeltasForSnapshot)
+    private lazy val isFirstSnapshotGroup = version % storeConf.minDeltasForSnapshot == 0
 
     override def get(inputStateKey: UnsafeRow): UnsafeRow = {
       calledGets += 1
-      val lastVersionOption = StatesWithVersions.getOrElse(inputStateKey.toString, new mutable.ListBuffer[Long]())
-        .lastOption
+      val lastVersionOption = StatesWithVersions.getOrElse(inputStateKey.toString, SnapshotGroupForKey())
+        .deltaVersions.lastOption
       lastVersionOption.map(lastVersion => {
         val state = dynamoDb.getTable(StateStoreTable)
           .getItem(new PrimaryKey(MappingStateStore.PartitionKey, s"${inputStateKey.toString}_${lastVersion}"))
@@ -115,15 +125,19 @@ class LocalDynamoDbStateStoreProvider extends StateStoreProvider {
 
     override def put(key: UnsafeRow, value: UnsafeRow): Unit = {
       UpdatesList.offer(StateStoreChange.fromUpdateAction(key.copy(), Some(value.copy()), false))
-      val stateVersions = StatesWithVersions.getOrElseUpdate(key.toString, new mutable.ListBuffer[Long]())
-      stateVersions.append(newVersion)
-      StatesWithVersions.put(key.toString, stateVersions)
+      val stateVersions = StatesWithVersions.getOrElseUpdate(key.toString, SnapshotGroupForKey())
+      val updatedStateVersion = stateVersions.addVersion(version)
+      StatesWithVersions.put(key.toString, updatedStateVersion)
       flushChangesForThreshold()
     }
 
     override def remove(key: UnsafeRow): Unit = {
       UpdatesList.offer(StateStoreChange.fromUpdateAction(key.copy(), None, true))
-      StatesWithVersions(key.toString).append(newVersion)
+      // We'll remove the state that for sure exists in the state store - otherwise, fail fast because it's not
+      // normal to remove a not existent state
+      val stateVersions = StatesWithVersions(key.toString)
+      val deletedStateVersion = stateVersions.delete(version)
+      StatesWithVersions.put(key.toString, deletedStateVersion)
       deletedStates.append(key.toString)
       flushChangesForThreshold()
     }
@@ -140,7 +154,7 @@ class LocalDynamoDbStateStoreProvider extends StateStoreProvider {
       if (itemsToWrite.nonEmpty) {
         calledFlushes += 1
         dynamoDbProxy.writeItems[StateStoreChange](StateStoreTable, itemsToWrite,
-          (stateStoreItem => stateStoreItem.toItem(newVersion)))
+          (stateStoreItem => stateStoreItem.toItem(version)))
 
         dynamoDbProxy.writeItems[StateStoreChange](SnapshotTable, itemsToWrite,
           (stateStoreItem => createItemForSnapshotGroupState(stateStoreItem.key))
@@ -152,37 +166,46 @@ class LocalDynamoDbStateStoreProvider extends StateStoreProvider {
       // I got the reason of keeping deletedStates apart => it'll be useful for abort
       // If we abort, we cancel all changed made so far, so we can simply change the versions
       deletedStates.foreach(stateKey => {
-        println(s"#commit remove state for ${stateKey}")
         StatesWithVersions.remove(stateKey)
       })
+      if (isFirstSnapshotGroup) {
+        // It simulates the real snapshot from HDFS-backed data source
+        // For the last version in given snapshot group we save all state in the snapshot table
+        // to retrieve them in the next group
+        val mappingFunction: (String) => Item = (stateKey => {
+          createItemForSnapshotGroupState(stateKey)
+        })
+        dynamoDbProxy.writeItems[String](SnapshotTable, StatesWithVersions.keys.toSeq, mappingFunction)
+      }
       isCommitted = true
-      println(s"#commit StatesWithVersions after=${StatesWithVersions}")
-      newVersion
+      version
     }
 
     override def abort(): Unit = {
-      println("#abort Aborting StateStore")
       val modifiedStates = StatesWithVersions.filter {
-        case (_, versions) => versions.last == newVersion
+        case (_, stateVersions) => stateVersions.lastVersion == version
       }
       val statesToWrite = modifiedStates.grouped(DynamoDbStateStoreParams.FlushThreshold)
       statesToWrite.foreach(states => {
-        states.values.foreach(versions => versions.remove(versions.length))
         abortAlreadyExistentSnapshots(states.toMap)
         abortNewSnapshots(states)
-        abortDeltaChanges(states.toMap)
+        abortDeltaChanges(states)
       })
       deletedStates.clear()
     }
-    private def abortAlreadyExistentSnapshots(states: collection.Map[String, mutable.Buffer[Long]]) = {
-      val notEmptyStates = states.filter { case (_, versions) => versions.nonEmpty }.keys.toSeq
+    private def abortAlreadyExistentSnapshots(states: collection.Map[String, SnapshotGroupForKey]) = {
+      val notEmptyStates = states
+        .map { case (key, versions) => (key, versions.abort) }
+        .filter { case (_, versions) => versions.deltaVersions.nonEmpty }.keys
       val mappingFunction: (String) => Item = (stateKey => {
         createItemForSnapshotGroupState(stateKey)
       })
-      dynamoDbProxy.writeItems[String](SnapshotTable, notEmptyStates, mappingFunction)
+      dynamoDbProxy.writeItems[String](SnapshotTable, notEmptyStates.toSeq, mappingFunction)
     }
-    private def abortNewSnapshots(states: collection.Map[String, mutable.Buffer[Long]]) = {
-      val emptyStates = states.filter { case (_, versions) => versions.isEmpty }
+    private def abortNewSnapshots(states: collection.Map[String, SnapshotGroupForKey]) = {
+      val emptyStates = states
+        .map { case (key, versions) => (key, versions.abort) }
+        .filter { case (_, versions) => versions.deltaVersions.isEmpty }
       val snapshotGroupsToDelete = emptyStates.keys
         .map(key => (snapshotPartitionKeyWithoutSuffix(snapshotGroup, stateStoreId.partitionId, key), key))
       val itemHandler: (TableWriteItems, (String, String)) => Unit = (tableWriteItems, key) => {
@@ -191,8 +214,8 @@ class LocalDynamoDbStateStoreProvider extends StateStoreProvider {
       }
       dynamoDbProxy.deleteItems[(String, String)](SnapshotTable, snapshotGroupsToDelete.toSeq, itemHandler)
     }
-    private def abortDeltaChanges(states: collection.Map[String, mutable.Buffer[Long]]) = {
-      val partitionKeysToDelete = states.keys.map(stateKey => s"${stateKey}_${newVersion}").toSeq
+    private def abortDeltaChanges(states: collection.Map[String, SnapshotGroupForKey]) = {
+      val partitionKeysToDelete = states.keys.map(stateKey => s"${stateKey}_${version}").toSeq
       val itemHandler: (TableWriteItems, String) => Unit = (tableWriteItems, key) => {
         tableWriteItems.addHashOnlyPrimaryKeyToDelete(MappingStateStore.PartitionKey, key)
       }
@@ -206,7 +229,7 @@ class LocalDynamoDbStateStoreProvider extends StateStoreProvider {
           MappingSnapshot.StateKey, stateKey
         )
         .withString(MappingSnapshot.DeltaVersions,
-          DynamoDbStateStoreParams.deltaVersionsOutput(StatesWithVersions(stateKey)))
+          DynamoDbStateStoreParams.deltaVersionsOutput(StatesWithVersions(stateKey).deltaVersions))
     }
 
     override def iterator(): Iterator[UnsafeRowPair] = new LocalDynamoDbStateStoreIterator(
@@ -255,4 +278,23 @@ object LocalDynamoDb {
   }
 
   lazy val dynamoDbConnector = new DynamoDB(dynamoDbLocal)
+}
+
+
+
+case class SnapshotGroupForKey(deltaVersions: Seq[Long] = Seq.empty, deltaDeleteVersion: Option[Long] = None) {
+
+  def addVersion(delta: Long): SnapshotGroupForKey = {
+    this.copy(deltaVersions = deltaVersions :+ delta)
+  }
+
+  def delete(delta: Long): SnapshotGroupForKey = {
+    addVersion(delta).copy(deltaDeleteVersion = Some(delta))
+  }
+
+  def abort: SnapshotGroupForKey = {
+    this.copy(deltaVersions = deltaVersions.dropRight(1), deltaDeleteVersion = None)
+  }
+
+  lazy val lastVersion = deltaVersions.last
 }
