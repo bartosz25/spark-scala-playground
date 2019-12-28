@@ -85,11 +85,7 @@ case class UnionJoinExecutorExec(left: SparkPlan, right: SparkPlan) extends Spar
           rowWriter.zeroOutNullBytes()
 
           val matchedRow = leftRows.getOrElse(rightRows.get).toSeq.head
-          val (letter, nr, flag) = if (matchedRow.isNullAt(0)) {
-            (matchedRow.getUTF8String(3), matchedRow.getInt(4), matchedRow.getInt(5))
-          } else {
-            (matchedRow.getUTF8String(0), matchedRow.getInt(1), matchedRow.getInt(2))
-          }
+          val (letter, nr, flag) = (matchedRow.getUTF8String(0), matchedRow.getInt(1), matchedRow.getInt(2))
           rowWriter.write(0, letter)
           rowWriter.write(1, nr)
           rowWriter.write(2, flag)
