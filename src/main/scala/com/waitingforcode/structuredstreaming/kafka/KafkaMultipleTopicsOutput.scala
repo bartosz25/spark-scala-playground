@@ -5,11 +5,11 @@ import org.apache.spark.sql.SparkSession
 /**
   * To test:
   * 1. Start a broker, use https://github.com/bartosz25/kafka-playground/tree/master/broker
-  * 2. Login to the broker with ``
+  * 2. Login to the broker with `docker exec -ti 2d85ab91d993 bin/bash` (2d85ab91d993 - container id of Kafka image)
   * 3. Create 2 topics:
   *     ```
-  *     kafka-topics.sh --create  --bootstrap-server localhost:9092 --topic spark_multiple_topics_1 --partitions 1 --replication-factor
-  *     kafka-topics.sh --create  --bootstrap-server localhost:9092 --topic spark_multiple_topics_2 --partitions 1 --replication-factor
+  *     kafka-topics.sh --create  --bootstrap-server localhost:9092 --topic spark_multiple_topics_1 --partitions 1 --replication-factor 1
+  *     kafka-topics.sh --create  --bootstrap-server localhost:9092 --topic spark_multiple_topics_2 --partitions 1 --replication-factor 1
   *     ```
   * 4. Run this code.
   * 5. Read data from both topics:
