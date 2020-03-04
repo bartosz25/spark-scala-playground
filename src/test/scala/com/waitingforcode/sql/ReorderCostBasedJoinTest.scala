@@ -43,7 +43,7 @@ class ReorderCostBasedJoinTest extends FlatSpec with Matchers with BeforeAndAfte
           sparkSession.sql(s"DROP TABLE IF EXISTS ${key}")
           sparkSession.sql(s"CREATE TABLE ${key} (${id} INT) USING hive OPTIONS (fileFormat 'textfile', fieldDelim ',')")
           sparkSession.sql(s"LOAD DATA LOCAL INPATH '${dataFile.getAbsolutePath}' INTO TABLE ${key}")
-          sparkSession.sql(s"ANALYZE TABLE ${key} COMPUTE STATISTICS FOR COLUMNS ${id}")
+          sparkSession.sql(s"ANALYZE TABLE ${key} COMPUTE STATISTICS")
         }
       }
     }
