@@ -23,30 +23,32 @@ class ReorderCostBasedJoinTest extends FlatSpec with Matchers with BeforeAndAfte
   private val baseDir = "/tmp/cbo_reorder_join/"
 
   override def beforeAll(): Unit = {
-    if (!new File(baseDir).exists()) {
-      val veryBigTable = "very_big_table"
-      val bigTable = "big_table"
-      val smallTable1 = "small_table1"
-      val smallTable2 = "small_table2"
-      val configs = Map(
-        veryBigTable -> 5000,
-        bigTable -> 1500,
-        smallTable1 -> 800,
-        smallTable2 -> 200
-      )
-      configs.foreach {
-        case (key, maxRows) => {
-          val data = (1 to maxRows).map(nr => nr).mkString("\n")
-          val dataFile = new File(s"${baseDir}${key}")
-          FileUtils.writeStringToFile(dataFile, data)
-          val id = s"${key}_id"
-          sparkSession.sql(s"DROP TABLE IF EXISTS ${key}")
-          sparkSession.sql(s"CREATE TABLE ${key} (${id} INT) USING hive OPTIONS (fileFormat 'textfile', fieldDelim ',')")
-          sparkSession.sql(s"LOAD DATA LOCAL INPATH '${dataFile.getAbsolutePath}' INTO TABLE ${key}")
-          sparkSession.sql(s"ANALYZE TABLE ${key} COMPUTE STATISTICS")
-        }
+    val veryBigTable = "very_big_table"
+    val bigTable = "big_table"
+    val smallTable1 = "small_table1"
+    val smallTable2 = "small_table2"
+    val configs = Map(
+      veryBigTable -> 5000,
+      bigTable -> 1500,
+      smallTable1 -> 800,
+      smallTable2 -> 200
+    )
+    configs.foreach {
+      case (key, maxRows) => {
+        val data = (1 to maxRows).map(nr => nr).mkString("\n")
+        val dataFile = new File(s"${baseDir}${key}")
+        FileUtils.writeStringToFile(dataFile, data)
+        val id = s"${key}_id"
+        sparkSession.sql(s"DROP TABLE IF EXISTS ${key}")
+        sparkSession.sql(s"CREATE TABLE ${key} (${id} INT) USING hive OPTIONS (fileFormat 'textfile', fieldDelim ',')")
+        sparkSession.sql(s"LOAD DATA LOCAL INPATH '${dataFile.getAbsolutePath}' INTO TABLE ${key}")
+        sparkSession.sql(s"ANALYZE TABLE ${key} COMPUTE STATISTICS FOR COLUMNS ${id}")
       }
     }
+  }
+
+  override def afterAll(): Unit = {
+    FileUtils.forceDelete(new File(baseDir))
   }
 
   "cost-based reorder join" should "apply to a not optimized query join" in {
