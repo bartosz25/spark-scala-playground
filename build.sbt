@@ -49,6 +49,7 @@ libraryDependencies += "com.almworks.sqlite4java" % "libsqlite4java-osx" % "late
 libraryDependencies += "com.almworks.sqlite4java" % "libsqlite4java-linux-i386" % "latest.integration" % "test"
 libraryDependencies += "com.almworks.sqlite4java" % "libsqlite4java-linux-amd64" % "latest.integration" % "test"
 
+libraryDependencies += "io.delta" %% "delta-core" % "0.5.0"
 
 /*
 If you run tests from com.waitingforcode.sparksummit2019.customstatestore,
