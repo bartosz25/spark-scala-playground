@@ -1,7 +1,5 @@
 package com.waitingforcode.sql
 
-package com.waitingforcode.sql
-
 import java.io.File
 
 import org.apache.commons.io.FileUtils
