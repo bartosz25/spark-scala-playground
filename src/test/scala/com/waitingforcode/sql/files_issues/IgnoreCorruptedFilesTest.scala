@@ -50,6 +50,7 @@ class IgnoreCorruptedFilesTest extends FlatSpec with Matchers with BeforeAndAfte
       TrueFileFilter.INSTANCE).asScala
     files.foreach(file => {
       if (file.getName.startsWith("part")) {
+        println(s"Altering ${file.getName()}")
         val datFile = new FileOutputStream(file, true).getChannel
         // Let's truncate this file to make it impossible to decompress
         datFile.truncate(file.length() - 2)
@@ -60,11 +61,12 @@ class IgnoreCorruptedFilesTest extends FlatSpec with Matchers with BeforeAndAfte
       }
     })
 
-    val jsonLines = sparkSession.read.schema(StructType(
+    val inputData = sparkSession.read.schema(StructType(
       Seq(StructField("letter", StringType))
-    )).json(outputDir).count()
+    )).json(outputDir)
 
-    jsonLines shouldEqual 24
+    inputData.show()
+    inputData.count() shouldEqual 24
   }
 
 }
